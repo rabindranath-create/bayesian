@@ -1,5 +1,6 @@
 clear variables
 % close all
+%clear
 clc
 
 c=-1;
@@ -13,18 +14,23 @@ f_function = @(x, t) 0;
 
 
 
+%pairwise_dist
+pairwise_dist = @(x, y) abs(x(:) - y(:)'); 
+
+
+
 % Example parameters
 sigma_1 = 3; rho_1 = 0.2;
 sigma_2 = 3; rho_2 = 0.2;
 
 Matern_32 = @(t1, t2) ...
-    sigma_1^2 * (1 + sqrt(3) * pdist2(t1, t2) / rho_1) ...
-    .* exp(-sqrt(3) * pdist2(t1, t2) / rho_1);
+    sigma_1^2 * (1 + sqrt(3) * pairwise_dist(t1, t2) / rho_1) ...
+    .* exp(-sqrt(3) * pairwise_dist(t1, t2) / rho_1);
 
 Matern_52 = @(x1, x2) ...
-    sigma_2^2 * (1 + sqrt(5) * pdist2(x1, x2) / rho_2 + ...
-    5 * pdist2(x1, x2).^2 / (3 * rho_2^2)) ...
-    .* exp(-sqrt(5) * pdist2(x1, x2) / rho_2);
+    sigma_2^2 * (1 + sqrt(5) * pairwise_dist(x1, x2) / rho_2 + ...
+    5 * pairwise_dist(x1, x2).^2 / (3 * rho_2^2)) ...
+    .* exp(-sqrt(5) * pairwise_dist(x1, x2) / rho_2);
 
 product_kernel = @(x1, t1, x2, t2) Matern_52(x1, x2) .* Matern_32(t1, t2);
 
@@ -91,7 +97,7 @@ after_A_j = cell(num_t, 1);
 
 
 % Recursive construction
-for i = 2:num_t
+for i = 2:4
     prev_mu = mu_functions{i-1};  % previous function handle
     prev_sigma = sigma_functions{i-1};  % previous function handle
 
@@ -146,6 +152,40 @@ sigma_functions{i} = @(x1, t1, x2, t2) prev_sigma(x1, t1, x2, t2) - ...
 end
 
 
+
+
+
+
+%%
+%sampling
+
+mu_0 = mu_functions{4}(x_input, t_input);
+sigma_0 = sigma_functions{4}(x_input, t_input, x_input, t_input);
+
+
+% Add a small amount of jitter for numerical stability
+sigma_0 = sigma_0 + 1e-6 * eye(size(sigma_0));
+
+% 4. Generate Samples
+L = chol(sigma_0, 'lower'); % Cholesky decomposition
+z = randn(N, 1);       % Standard normal random variables
+
+
+% Generate the GP sample
+f = mu_0 + L * z;
+
+% 5. Plot the sample
+% Reshape the sampled function values to the grid format for plotting
+f_grid = reshape(f, num_t, num_x);
+
+figure;
+surf(X_grid, T_grid, flipud(f_grid));
+xlabel('Input (x)');
+ylabel('Input (t)');
+zlabel('Output (f)');
+title('Sample from a Multivariate Gaussian Process');
+shading interp;
+colorbar;
 
 
 save('results.mat');
