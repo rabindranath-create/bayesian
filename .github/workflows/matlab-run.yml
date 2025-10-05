@@ -3,8 +3,6 @@ name: Run MATLAB Code
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -21,3 +19,9 @@ jobs:
         uses: matlab-actions/run-command@v2
         with:
           command: bayesian_time_stepping
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: matlab-results
+          path: results.mat
